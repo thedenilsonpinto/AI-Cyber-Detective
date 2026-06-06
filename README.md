@@ -6,6 +6,9 @@ Developed by **Denilson Pinto B**
 
 ---
 
+## 🌐 Live Demo
+https://ai-cyber-detective-bydenilsonpinto.streamlit.app
+
 ## 🚀 Features
 
 ✅ Phishing Scam Detection

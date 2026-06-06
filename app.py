@@ -2,6 +2,19 @@ import streamlit as st
 import matplotlib.pyplot as plt
 from detective_engine import investigate_message
 from report_generator import create_report
+from PIL import Image
+
+st.set_page_config(
+    page_title="AI Cyber Detective",
+    page_icon="🕵️",
+    layout="wide"
+)
+logo = Image.open("assets/logo.png")
+
+st.image(
+    logo,
+    width=180
+)
 
 # ----------------------------------
 # PAGE CONFIG
@@ -91,6 +104,9 @@ Developed by <b>Denilson Pinto B</b>
 
 </div>
 """, unsafe_allow_html=True)
+st.caption(
+    "Powered by AI • Developed by DENILSON PINTO B"
+)
 
 # ----------------------------------
 # RECOMMENDATIONS
@@ -329,6 +345,12 @@ Security Grade: {results['grade']}
 
 st.markdown("---")
 
-st.caption(
-    "🛡️ AI Cyber Detective | Developed by Denilson Pinto B"
-)
+st.markdown("""
+### 🛡️ AI Cyber Detective
+
+Developed by **DENILSON PINTO B**
+
+Artificial Intelligence Engineer
+
+© 2026 All Rights Reserved
+""")
