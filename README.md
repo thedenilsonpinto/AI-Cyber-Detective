@@ -7,7 +7,7 @@ Developed by **Denilson Pinto B**
 ---
 
 ## 🌐 Live Demo
-https://ai-cyber-detective-bydenilsonpinto.streamlit.app
+https://ai-cyber-detective-thedenilsonpinto.streamlit.app/
 
 ## 🚀 Features
 
