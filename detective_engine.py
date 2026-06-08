@@ -1,15 +1,18 @@
 from google import genai
 import json
 import re
+import os
+from dotenv import load_dotenv
+
+# ----------------------------------
+# LOAD ENVIRONMENT VARIABLES
+# ----------------------------------
+
+load_dotenv()
 
 # ----------------------------------
 # GEMINI CLIENT
 # ----------------------------------
-
-import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
@@ -24,17 +27,19 @@ def investigate_message(message):
     prompt = f"""
 You are an Expert Cyber Security Threat Analyst.
 
-Analyze the following message.
+Analyze the following message carefully.
 
 Message:
 {message}
 
-Determine:
+Your task:
 
-1. Attack Type
-2. Risk Level
-3. Confidence Score (0-100)
-4. Explanation
+1. Identify the most likely cyber threat, scam, fraud, phishing attempt, impersonation attempt, social engineering tactic, or suspicious behavior.
+2. Use reasoning and context.
+3. Do not rely only on keywords.
+4. If the message appears safe, classify it as Safe Message.
+5. Assign a realistic confidence score from 0-100.
+6. Provide a short explanation.
 
 Return ONLY valid JSON.
 
@@ -53,9 +58,10 @@ MEDIUM
 HIGH
 CRITICAL
 
-Do not return markdown.
-Do not return extra text.
-Return only JSON.
+No markdown.
+No code blocks.
+No extra text.
+Only JSON.
 """
 
     try:
@@ -68,11 +74,13 @@ Return only JSON.
         raw = response.text.strip()
 
         # Remove markdown if Gemini adds it
+
         raw = raw.replace("```json", "")
         raw = raw.replace("```", "")
         raw = raw.strip()
 
         # Extract JSON safely
+
         json_match = re.search(
             r"\{.*\}",
             raw,
@@ -111,7 +119,9 @@ Return only JSON.
             min(confidence, 100)
         )
 
-        # Auto Grade Calculation
+        # ----------------------------------
+        # AUTO GRADE
+        # ----------------------------------
 
         if confidence >= 85:
             grade = "D"
@@ -128,15 +138,10 @@ Return only JSON.
         return {
 
             "attack": attack,
-
             "risk": risk,
-
             "confidence": confidence,
-
             "grade": grade,
-
             "evidence": [],
-
             "explanation": explanation
 
         }
@@ -152,12 +157,12 @@ Return only JSON.
             response = client.models.generate_content(
                 model="gemini-2.5-flash",
                 contents=f"""
-Analyze this message.
+Analyze this message and explain whether it appears suspicious.
 
 Message:
 {message}
 
-Explain whether it appears suspicious and why.
+Provide a concise security assessment.
 """
             )
 
@@ -166,13 +171,13 @@ Explain whether it appears suspicious and why.
             return {
 
                 "attack":
-                "AI Threat Analysis",
+                "Suspicious Message",
 
                 "risk":
                 "MEDIUM",
 
                 "confidence":
-                60,
+                65,
 
                 "grade":
                 "B",
@@ -185,26 +190,30 @@ Explain whether it appears suspicious and why.
 
             }
 
-        except Exception as e:
+        except Exception:
+
+            # ----------------------------------
+            # FINAL SAFETY FALLBACK
+            # ----------------------------------
 
             return {
 
                 "attack":
-                "Unable To Analyze",
+                "Message Review Required",
 
                 "risk":
-                "LOW",
+                "MEDIUM",
 
                 "confidence":
-                0,
+                50,
 
                 "grade":
-                "A+",
+                "B",
 
                 "evidence":
                 [],
 
                 "explanation":
-                str(e)
+                "The AI service was temporarily unavailable. The message could not be fully analyzed, but caution is recommended when dealing with unknown links, requests for money, passwords, OTPs, or personal information."
 
             }
