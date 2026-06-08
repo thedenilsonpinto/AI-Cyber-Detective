@@ -154,9 +154,6 @@ if st.button("🔍 Investigate"):
     if message.strip():
 
         results = investigate_message(message)
-
-        st.success("🕵️ Investigation Complete")
-
         # ----------------------------------
         # METRIC CARDS
         # ----------------------------------
@@ -219,7 +216,7 @@ Security Grade: {results['grade']}
 
         st.subheader("🤖 AI Threat Explanation")
 
-        st.warning(
+        st.info(
     results["explanation"]
 )
 
@@ -247,7 +244,18 @@ Security Grade: {results['grade']}
             st.success(
                 recommendations[results["attack"]]
             )
+        else:
 
+            st.success(
+        "Avoid clicking suspicious links, sharing OTPs, passwords, bank details, or sending money to unknown sources."
+    )
+            confidence = max(
+    0,
+    min(
+        int(results["confidence"]),
+        100
+    )
+)
         # ----------------------------------
         # THREAT METER
         # ----------------------------------
@@ -302,6 +310,8 @@ Security Grade: {results['grade']}
         )
 
         st.pyplot(fig)
+        st.progress(confidence)
+        100 - confidence
 
         # ----------------------------------
         # TIMELINE

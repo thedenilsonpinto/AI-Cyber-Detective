@@ -1,143 +1,210 @@
-attack_patterns = {
+from google import genai
+import json
+import re
 
-    "Phishing Scam": [
-        "click the link",
-        "verify account",
-        "login now",
-        "confirm account"
-    ],
+# ----------------------------------
+# GEMINI CLIENT
+# ----------------------------------
 
-    "Fake Job Scam": [
-        "registration fee",
-        "pay fee",
-        "interview fee",
-        "job offer"
-    ],
+import os
+from dotenv import load_dotenv
 
-    "OTP Theft": [
-        "share otp",
-        "send otp",
-        "verify otp"
-    ],
+load_dotenv()
 
-    "Investment Scam": [
-        "double your money",
-        "guaranteed return",
-        "earn lakhs",
-        "investment opportunity"
-    ],
+client = genai.Client(
+    api_key=os.getenv("GEMINI_API_KEY")
+)
 
-    "Lottery Scam": [
-        "you won",
-        "claim reward",
-        "congratulations",
-        "winner"
-    ],
+# ----------------------------------
+# CYBER INVESTIGATION ENGINE
+# ----------------------------------
 
-    "Tech Support Scam": [
-        "system infected",
-        "virus detected",
-        "call support",
-        "security alert"
-    ]
-}
+def investigate_message(message):
 
+    prompt = f"""
+You are an Expert Cyber Security Threat Analyst.
 
-def investigate_message(text):
+Analyze the following message.
 
-    text = text.lower()
+Message:
+{message}
 
-    detected_attack = "Unknown"
+Determine:
 
-    confidence = 0
+1. Attack Type
+2. Risk Level
+3. Confidence Score (0-100)
+4. Explanation
 
-    evidence = []
+Return ONLY valid JSON.
 
-    for attack, patterns in attack_patterns.items():
+{{
+    "attack": "",
+    "risk": "",
+    "confidence": 0,
+    "explanation": ""
+}}
 
-        score = 0
-        found_patterns = []
+Rules:
 
-        for pattern in patterns:
+Risk must be one of:
+LOW
+MEDIUM
+HIGH
+CRITICAL
 
-            if pattern in text:
+Do not return markdown.
+Do not return extra text.
+Return only JSON.
+"""
 
-                score += 1
-                found_patterns.append(pattern)
+    try:
 
-        if score > confidence:
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
 
-            confidence = score
-            detected_attack = attack
-            evidence = found_patterns
+        raw = response.text.strip()
 
-    # -------------------------
-    # THREAT SCORE
-    # -------------------------
+        # Remove markdown if Gemini adds it
+        raw = raw.replace("```json", "")
+        raw = raw.replace("```", "")
+        raw = raw.strip()
 
-    threat_score = min(confidence * 25, 100)
+        # Extract JSON safely
+        json_match = re.search(
+            r"\{.*\}",
+            raw,
+            re.DOTALL
+        )
 
-    # -------------------------
-    # RISK LEVEL
-    # -------------------------
+        if json_match:
+            raw = json_match.group(0)
 
-    if threat_score >= 75:
-        risk = "CRITICAL"
-        grade = "D"
+        result = json.loads(raw)
 
-    elif threat_score >= 50:
-        risk = "HIGH"
-        grade = "C"
+        attack = result.get(
+            "attack",
+            "AI Threat Analysis"
+        )
 
-    elif threat_score >= 25:
-        risk = "MEDIUM"
-        grade = "B"
+        risk = result.get(
+            "risk",
+            "MEDIUM"
+        ).upper()
 
-    else:
-        risk = "LOW"
-        grade = "A+"
+        confidence = int(
+            result.get(
+                "confidence",
+                50
+            )
+        )
 
-    # -------------------------
-    # AI EXPLANATIONS
-    # -------------------------
+        explanation = result.get(
+            "explanation",
+            "AI completed analysis."
+        )
 
-    explanations = {
+        confidence = max(
+            0,
+            min(confidence, 100)
+        )
 
-        "Phishing Scam":
-        "This message attempts to steal personal information by asking users to verify accounts or click suspicious links.",
+        # Auto Grade Calculation
 
-        "Fake Job Scam":
-        "This message uses fake job opportunities and requests money through registration or interview fees.",
+        if confidence >= 85:
+            grade = "D"
 
-        "OTP Theft":
-        "The sender attempts to obtain OTP codes which can be used to access bank accounts or online services.",
+        elif confidence >= 70:
+            grade = "C"
 
-        "Investment Scam":
-        "The message promises unrealistic profits and guaranteed returns to attract victims.",
+        elif confidence >= 50:
+            grade = "B"
 
-        "Lottery Scam":
-        "The sender claims the victim has won a reward and uses excitement tactics to collect personal information or money.",
+        else:
+            grade = "A+"
 
-        "Tech Support Scam":
-        "The attacker pretends to be technical support and creates fear to gain access to devices or personal data."
-    }
+        return {
 
-    ai_explanation = explanations.get(
-        detected_attack,
-        "No major cyber threat detected. Continue to stay alert and verify unknown messages."
-    )
+            "attack": attack,
 
-    # -------------------------
-    # RETURN RESULTS
-    # -------------------------
+            "risk": risk,
 
-    return {
+            "confidence": confidence,
 
-        "attack": detected_attack,
-        "confidence": threat_score,
-        "risk": risk,
-        "grade": grade,
-        "evidence": evidence,
-        "explanation": ai_explanation
+            "grade": grade,
 
-    }
+            "evidence": [],
+
+            "explanation": explanation
+
+        }
+
+    except Exception:
+
+        # ----------------------------------
+        # FALLBACK AI ANALYSIS
+        # ----------------------------------
+
+        try:
+
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=f"""
+Analyze this message.
+
+Message:
+{message}
+
+Explain whether it appears suspicious and why.
+"""
+            )
+
+            explanation = response.text
+
+            return {
+
+                "attack":
+                "AI Threat Analysis",
+
+                "risk":
+                "MEDIUM",
+
+                "confidence":
+                60,
+
+                "grade":
+                "B",
+
+                "evidence":
+                [],
+
+                "explanation":
+                explanation
+
+            }
+
+        except Exception as e:
+
+            return {
+
+                "attack":
+                "Unable To Analyze",
+
+                "risk":
+                "LOW",
+
+                "confidence":
+                0,
+
+                "grade":
+                "A+",
+
+                "evidence":
+                [],
+
+                "explanation":
+                str(e)
+
+            }
